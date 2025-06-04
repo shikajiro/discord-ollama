@@ -5,6 +5,7 @@ export * from './messageNormal.js'
 export * from './commands.js'
 export * from './configInterfaces.js'
 export * from './mentionClean.js'
+export * from './shouldReply.js'
 
 // handler imports
 export * from './handlers/chatHistoryHandler.js'

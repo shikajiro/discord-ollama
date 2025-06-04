@@ -1,5 +1,5 @@
 import { TextChannel } from 'discord.js'
-import { event, Events, normalMessage, UserMessage, clean } from '../utils/index.js'
+import { event, Events, normalMessage, UserMessage, clean, shouldReply } from '../utils/index.js'
 import {
     getChannelInfo, getServerConfig, getUserConfig, openChannelInfo,
     openConfig, UserConfig, getAttachmentData, getTextFileAttachmentData
@@ -20,8 +20,20 @@ export default event(Events.MessageCreate, async ({ log, msgHist, ollama, client
     // Do not respond if bot talks in the chat
     if (message.author.username === message.client.user.username) return
 
-    // Only respond if message mentions the bot
-    if (!message.mentions.has(clientId)) return
+    // Do not respond to other bots
+    if (message.author.bot) return
+
+    // Check if bot should respond
+    const hasMention = message.mentions.has(clientId)
+    if (!hasMention && Keys.autoReply) {
+        // Ask AI if we should reply to this message
+        const shouldRespond = await shouldReply(ollama, cleanedMessage, defaultModel as string)
+        if (!shouldRespond) return
+        log(`AI decided to respond to non-mention message: "${cleanedMessage}"`)
+    } else if (!hasMention) {
+        // Auto reply is disabled and no mention, so don't respond
+        return
+    }
 
     // default stream to false
     let shouldStream = false

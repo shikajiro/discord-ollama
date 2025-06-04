@@ -7,7 +7,8 @@ export const Keys = {
     defaultModel: getEnvVar('MODEL', 'llama3.2'),
     redisHost: getEnvVar('REDIS_IP', '172.18.0.4'), // default redis host if none
     redisPort: parseInt(getEnvVar('REDIS_PORT', '6379')), // default redis port if none
-    systemPrompt: getEnvVar('SYSTEM_PROMPT', '') // system prompt for AI assistant
+    systemPrompt: getEnvVar('SYSTEM_PROMPT', ''), // system prompt for AI assistant
+    autoReply: getEnvVar('AUTO_REPLY', 'true') === 'true' // enable auto reply without mentions
 } as const // readonly keys
 
 export default Keys
