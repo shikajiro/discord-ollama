@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(find:*)",
+      "Bash(npm install)",
+      "Bash(grep:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(npm run build:*)",
+      "Bash(npm run test:run:*)"
     ],
     "deny": []
   }

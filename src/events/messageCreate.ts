@@ -4,6 +4,7 @@ import {
     getChannelInfo, getServerConfig, getUserConfig, openChannelInfo,
     openConfig, UserConfig, getAttachmentData, getTextFileAttachmentData
 } from '../utils/index.js'
+import Keys from '../keys.js'
 
 /** 
  * Max Message length for free users is 2000 characters (bot or not).
@@ -165,7 +166,7 @@ export default event(Events.MessageCreate, async ({ log, msgHist, ollama, client
         })
 
         // response string for ollama to put its response
-        const response: string = await normalMessage(message, ollama, model, msgHist, shouldStream)
+        const response: string = await normalMessage(message, ollama, model, msgHist, shouldStream, Keys.systemPrompt)
 
         // If something bad happened, remove user query and stop
         if (response == undefined) { msgHist.pop(); return }

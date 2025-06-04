@@ -13,11 +13,13 @@ export type EventKeys = keyof ClientEvents // only wants keys of ClientEvents ob
  * @param model the model to run
  * @param ollama ollama api client
  * @param msgHist message history
+ * @param systemPrompt system prompt for the AI assistant
  */
 export type ChatParams = {
     model: string,
     ollama: Ollama,
-    msgHist: UserMessage[]
+    msgHist: UserMessage[],
+    systemPrompt?: string
 }
 
 /** 

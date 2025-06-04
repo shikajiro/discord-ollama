@@ -9,13 +9,15 @@ import { AbortableAsyncIterator } from 'ollama/src/utils.js'
  * @param message message sent by the user
  * @param model name of model to run query
  * @param msgHist message history between user and model
+ * @param systemPrompt system prompt for the AI assistant
  */
 export async function normalMessage(
     message: Message,
     ollama: Ollama,
     model: string,
     msgHist: Queue<UserMessage>,
-    stream: boolean
+    stream: boolean,
+    systemPrompt?: string
 ): Promise<string> {
     // bot's respnse
     let response: ChatResponse | AbortableAsyncIterator<ChatResponse>
@@ -27,7 +29,8 @@ export async function normalMessage(
             const params: ChatParams = {
                 model: model,
                 ollama: ollama,
-                msgHist: msgHist.getItems()
+                msgHist: msgHist.getItems(),
+                systemPrompt: systemPrompt
             }
 
             // run query based on stream preference, true = stream, false = block
