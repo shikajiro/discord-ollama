@@ -25,14 +25,29 @@ export default event(Events.MessageCreate, async ({ log, msgHist, ollama, client
 
     // Check if bot should respond
     const hasMention = message.mentions.has(clientId)
-    if (!hasMention && Keys.autoReply) {
-        // Ask AI if we should reply to this message
-        const shouldRespond = await shouldReply(ollama, cleanedMessage, defaultModel as string)
+    
+    // Don't analyze if mentioned - always respond to mentions
+    if (!hasMention) {
+        if (!Keys.autoReply) {
+            // Auto reply is disabled and no mention, so don't respond
+            return
+        }
+        
+        // Get chat history for context
+        let chatMessages: UserMessage[] = await new Promise((resolve) => {
+            getChannelInfo(`${message.channelId}.json`, (channelInfo) => {
+                if (channelInfo?.messages) {
+                    resolve(channelInfo.messages)
+                } else {
+                    resolve([])
+                }
+            })
+        })
+        
+        // Ask AI if we should reply to this message with context
+        const shouldRespond = await shouldReply(ollama, cleanedMessage, defaultModel as string, chatMessages)
         if (!shouldRespond) return
         log(`AI decided to respond to non-mention message: "${cleanedMessage}"`)
-    } else if (!hasMention) {
-        // Auto reply is disabled and no mention, so don't respond
-        return
     }
 
     // default stream to false
