@@ -38,7 +38,6 @@ export interface ServerConfig {
 export interface Channel {
     readonly id: string
     readonly name: string
-    readonly user: string
     messages: UserMessage[]
 }
 

@@ -4,14 +4,14 @@ import fs from 'fs'
 import path from 'path'
 
 /**
- * Method to check if a thread history file exists
+ * Method to check if a channel history file exists
  * 
- * @param channel parent thread of the requested thread (can be GuildText)
+ * @param channel the channel to check
  * @returns true if channel does not exist, false otherwise
  */
-async function checkChannelInfoExists(channel: TextChannel, user: string) {
+async function checkChannelInfoExists(channel: TextChannel) {
     const doesExists: boolean = await new Promise((resolve) => {
-        getChannelInfo(`${channel.id}-${user}.json`, (channelInfo) => {
+        getChannelInfo(`${channel.id}.json`, (channelInfo) => {
             if (channelInfo?.messages)
                 resolve(true)
             else
@@ -22,25 +22,24 @@ async function checkChannelInfoExists(channel: TextChannel, user: string) {
 }
 
 /**
- * Method to clear channel history for requesting user
+ * Method to clear channel history
  * 
- * @param filename guild id string
+ * @param filename channel id string
  * @param channel the TextChannel in the Guild
- * @param user username of user
  * @returns nothing
  */
-export async function clearChannelInfo(filename: string, channel: TextChannel, user: string): Promise<boolean> {
-    const channelInfoExists: boolean = await checkChannelInfoExists(channel, user)
+export async function clearChannelInfo(filename: string, channel: TextChannel): Promise<boolean> {
+    const channelInfoExists: boolean = await checkChannelInfoExists(channel)
 
-    // If thread does not exist, file can't be found
+    // If channel does not exist, file can't be found
     if (!channelInfoExists) return false
 
-    // Attempt to clear user channel history
-    const fullFileName = `data/${filename}-${user}.json`
+    // Attempt to clear channel history
+    const fullFileName = `data/${filename}.json`
     const cleanedHistory: boolean = await new Promise((resolve) => {
         fs.readFile(fullFileName, 'utf8', (error, data) => {
             if (error)
-                console.log(`[Error: openChannelInfo] Incorrect file format`)
+                console.log(`[Error: clearChannelInfo] Incorrect file format`)
             else {
                 const object = JSON.parse(data)
                 if (object['messages'].length === 0) // already empty, let user know
@@ -59,13 +58,12 @@ export async function clearChannelInfo(filename: string, channel: TextChannel, u
 /**
  * Method to open the channel history
  * 
- * @param filename name of the json file for the channel by user
+ * @param filename name of the json file for the channel
  * @param channel the text channel info
- * @param user the user's name
- * @param messages their messages
+ * @param messages channel messages
  */
-export async function openChannelInfo(filename: string, channel: TextChannel | ThreadChannel, user: string, messages: UserMessage[] = []): Promise<void> {
-    const fullFileName = `data/${filename}-${user}.json`
+export async function openChannelInfo(filename: string, channel: TextChannel | ThreadChannel, messages: UserMessage[] = []): Promise<void> {
+    const fullFileName = `data/${filename}.json`
     if (fs.existsSync(fullFileName)) {
         fs.readFile(fullFileName, 'utf8', (error, data) => {
             if (error)
@@ -84,7 +82,6 @@ export async function openChannelInfo(filename: string, channel: TextChannel | T
             `{ 
                 \"id\": \"${channel?.id}\", 
                 \"name\": \"${channel?.name}\", 
-                \"user\": \"${user}\", 
                 \"messages\": []
             }`
         )

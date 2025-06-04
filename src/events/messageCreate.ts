@@ -120,14 +120,13 @@ export default event(Events.MessageCreate, async ({ log, msgHist, ollama, client
             }
         }
 
-        // need new check for "open/active" threads/channels here!
+        // Get channel-wide context instead of user-specific
         let chatMessages: UserMessage[] = await new Promise((resolve) => {
-            // set new queue to modify
-            getChannelInfo(`${message.channelId}-${message.author.username}.json`, (channelInfo) => {
+            getChannelInfo(`${message.channelId}.json`, (channelInfo) => {
                 if (channelInfo?.messages)
                     resolve(channelInfo.messages)
                 else {
-                    log(`Channel/Thread ${message.channel}-${message.author.username} does not exist. File will be created shortly...`)
+                    log(`Channel ${message.channelId} does not exist. File will be created shortly...`)
                     resolve([])
                 }
             })
@@ -136,15 +135,14 @@ export default event(Events.MessageCreate, async ({ log, msgHist, ollama, client
         if (chatMessages.length === 0) {
             chatMessages = await new Promise((resolve, reject) => {
                 openChannelInfo(message.channelId,
-                    message.channel as TextChannel,
-                    message.author.tag
+                    message.channel as TextChannel
                 )
-                getChannelInfo(`${message.channelId}-${message.author.username}.json`, (channelInfo) => {
+                getChannelInfo(`${message.channelId}.json`, (channelInfo) => {
                     if (channelInfo?.messages)
                         resolve(channelInfo.messages)
                     else {
-                        log(`Channel/Thread ${message.channel}-${message.author.username} does not exist. File will be created shortly...`)
-                        reject(new Error(`Failed to find ${message.author.username}'s history. Try chatting again.`))
+                        log(`Channel ${message.channelId} does not exist. File will be created shortly...`)
+                        reject(new Error(`Failed to find channel history. Try chatting again.`))
                     }
                 })
             })
@@ -170,11 +168,12 @@ export default event(Events.MessageCreate, async ({ log, msgHist, ollama, client
         // check if we can push, if not, remove oldest
         while (msgHist.size() >= msgHist.capacity) msgHist.dequeue()
 
-        // push user response before ollama query
+        // push user response with username before ollama query
         msgHist.enqueue({
             role: 'user',
             content: cleanedMessage,
-            images: messageAttachment || []
+            images: messageAttachment || [],
+            username: message.author.username
         })
 
         // response string for ollama to put its response
@@ -196,7 +195,6 @@ export default event(Events.MessageCreate, async ({ log, msgHist, ollama, client
         // only update the json on success
         openChannelInfo(message.channelId,
             message.channel as TextChannel,
-            message.author.tag,
             msgHist.getItems()
         )
     } catch (error: any) {

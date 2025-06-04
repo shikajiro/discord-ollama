@@ -27,11 +27,13 @@ export type ChatParams = {
  * @param role either assistant, user, or system
  * @param content string of the message the user or assistant provided
  * @param images array of images that the user or assistant provided
+ * @param username username of the person who sent the message (optional for assistant/system)
  */
 export type UserMessage = {
     role: string,
     content: string,
-    images: string[] // May or may not have images in message
+    images: string[], // May or may not have images in message
+    username?: string // username for user messages
 }
 
 // Event properties
