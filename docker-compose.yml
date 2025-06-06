@@ -9,6 +9,8 @@ services:
     restart: always # rebuild container always
     image: kevinthedang/discord-ollama:0.8.4
     env_file: .env
+    environment:
+      SYSTEM_PROMPT: "あなたは親切なDiscordアシスタントです。応答する際は、必ず会話の最後の10件のメッセージのコンテキストを考慮してください。会話の流れに注意を払い、以前のメッセージとの継続性を保つようにしてください。"
     networks:
       ollama-net:
         ipv4_address: ${DISCORD_IP}
