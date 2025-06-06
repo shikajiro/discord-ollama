@@ -208,7 +208,7 @@ export default event(Events.MessageCreate, async ({ log, msgHist, ollama, client
         })
 
         // only update the json on success
-        openChannelInfo(message.channelId,
+        await openChannelInfo(message.channelId,
             message.channel as TextChannel,
             msgHist.getItems()
         )

@@ -64,36 +64,49 @@ export async function clearChannelInfo(filename: string, channel: TextChannel): 
  */
 export async function openChannelInfo(filename: string, channel: TextChannel | ThreadChannel, messages: UserMessage[] = []): Promise<void> {
     const fullFileName = `data/${filename}.json`
-    if (fs.existsSync(fullFileName)) {
-        fs.readFile(fullFileName, 'utf8', (error, data) => {
-            if (error)
-                console.log(`[Error: openChannelInfo] Incorrect file format`)
-            else {
-                const object = JSON.parse(data)
-                if (object['messages'].length === 0)
-                    object['messages'] = messages as []
-                else if (object['messages'].length !== 0 && messages.length !== 0)
-                    object['messages'] = messages as []
+    
+    return new Promise((resolve, reject) => {
+        if (fs.existsSync(fullFileName)) {
+            fs.readFile(fullFileName, 'utf8', (error, data) => {
+                if (error) {
+                    console.log(`[Error: openChannelInfo] Incorrect file format`)
+                    reject(error)
+                } else {
+                    try {
+                        const object = JSON.parse(data)
+                        if (object['messages'].length === 0)
+                            object['messages'] = messages as []
+                        else if (object['messages'].length !== 0 && messages.length !== 0)
+                            object['messages'] = messages as []
+                        fs.writeFileSync(fullFileName, JSON.stringify(object, null, 2))
+                        resolve()
+                    } catch (parseError) {
+                        console.log(`[Error: openChannelInfo] JSON parse error`)
+                        reject(parseError)
+                    }
+                }
+            })
+        } else { // file doesn't exist, create it
+            try {
+                const object: Channel = {
+                    id: channel?.id || '',
+                    name: channel?.name || '',
+                    messages: messages
+                }
+
+                const directory = path.dirname(fullFileName)
+                if (!fs.existsSync(directory))
+                    fs.mkdirSync(directory, { recursive: true })
+
                 fs.writeFileSync(fullFileName, JSON.stringify(object, null, 2))
+                console.log(`[Util: openChannelInfo] Created '${fullFileName}' in working directory`)
+                resolve()
+            } catch (writeError) {
+                console.log(`[Error: openChannelInfo] File write error`)
+                reject(writeError)
             }
-        })
-    } else { // file doesn't exist, create it
-        const object: Configuration = JSON.parse(
-            `{ 
-                \"id\": \"${channel?.id}\", 
-                \"name\": \"${channel?.name}\", 
-                \"messages\": []
-            }`
-        )
-
-        const directory = path.dirname(fullFileName)
-        if (!fs.existsSync(directory))
-            fs.mkdirSync(directory, { recursive: true })
-
-        // only creating it, no need to add anything
-        fs.writeFileSync(fullFileName, JSON.stringify(object, null, 2))
-        console.log(`[Util: openChannelInfo] Created '${fullFileName}' in working directory`)
-    }
+        }
+    })
 }
 
 /**
