@@ -1,5 +1,5 @@
 import { TextChannel } from 'discord.js'
-import { event, Events, normalMessage, UserMessage, clean, shouldReply } from '../utils/index.js'
+import { event, Events, normalMessage, UserMessage, clean, shouldReply, messageHistoryCache } from '../utils/index.js'
 import {
     getChannelInfo, getServerConfig, getUserConfig, openChannelInfo,
     openConfig, UserConfig, getAttachmentData, getTextFileAttachmentData
@@ -135,17 +135,24 @@ export default event(Events.MessageCreate, async ({ log, msgHist, ollama, client
             }
         }
 
-        // Get channel-wide context instead of user-specific
-        let chatMessages: UserMessage[] = await new Promise((resolve) => {
-            getChannelInfo(`${message.channelId}.json`, (channelInfo) => {
-                if (channelInfo?.messages)
-                    resolve(channelInfo.messages)
-                else {
-                    log(`Channel ${message.channelId} does not exist. File will be created shortly...`)
-                    resolve([])
-                }
+        // Get channel-wide context from memory cache first
+        let chatMessages: UserMessage[] = messageHistoryCache.getHistory(message.channelId)
+        
+        // If cache is empty, try to load from file
+        if (chatMessages.length === 0) {
+            chatMessages = await new Promise((resolve) => {
+                getChannelInfo(`${message.channelId}.json`, (channelInfo) => {
+                    if (channelInfo?.messages) {
+                        // Load last 10 messages from file to cache
+                        messageHistoryCache.setHistory(message.channelId, channelInfo.messages)
+                        resolve(channelInfo.messages)
+                    } else {
+                        log(`Channel ${message.channelId} does not exist. File will be created shortly...`)
+                        resolve([])
+                    }
+                })
             })
-        })
+        }
 
         if (chatMessages.length === 0) {
             chatMessages = await new Promise((resolve, reject) => {
@@ -153,9 +160,10 @@ export default event(Events.MessageCreate, async ({ log, msgHist, ollama, client
                     message.channel as TextChannel
                 )
                 getChannelInfo(`${message.channelId}.json`, (channelInfo) => {
-                    if (channelInfo?.messages)
+                    if (channelInfo?.messages) {
+                        messageHistoryCache.setHistory(message.channelId, channelInfo.messages)
                         resolve(channelInfo.messages)
-                    else {
+                    } else {
                         log(`Channel ${message.channelId} does not exist. File will be created shortly...`)
                         reject(new Error(`Failed to find channel history. Try chatting again.`))
                     }
@@ -177,43 +185,46 @@ export default event(Events.MessageCreate, async ({ log, msgHist, ollama, client
 
         const model: string = userConfig.options['switch-model']
 
-        // set up new queue
-        msgHist.setQueue(chatMessages)
+        // Create new queue with existing history from cache
+        msgHist.setQueue([...chatMessages])
 
-        // check if we can push, if not, remove oldest
-        while (msgHist.size() >= msgHist.capacity) msgHist.dequeue()
-
-        // push user response with username before ollama query
-        msgHist.enqueue({
+        // Add the new user message
+        const newUserMessage: UserMessage = {
             role: 'user',
             content: cleanedMessage,
             images: messageAttachment || [],
             username: message.author.username
-        })
+        }
+        
+        // Add to queue for AI processing
+        msgHist.enqueue(newUserMessage)
+        
+        // Trim queue if necessary
+        while (msgHist.size() > msgHist.capacity) msgHist.dequeue()
 
         // response string for ollama to put its response
         const response: string = await normalMessage(message, ollama, model, msgHist, shouldStream, Keys.systemPrompt)
 
-        // If something bad happened, remove user query and stop
-        if (response == undefined) { msgHist.pop(); return }
+        // If something bad happened, don't save to cache
+        if (response == undefined) return
 
-        // if queue is full, remove the oldest message
-        while (msgHist.size() >= msgHist.capacity) msgHist.dequeue()
-
-        // successful query, save it in context history
-        msgHist.enqueue({
+        // Add user message to cache
+        messageHistoryCache.addMessage(message.channelId, newUserMessage)
+        
+        // Add assistant response to cache
+        const assistantMessage: UserMessage = {
             role: 'assistant',
             content: response,
-            images: messageAttachment || []
-        })
+            images: []
+        }
+        messageHistoryCache.addMessage(message.channelId, assistantMessage)
 
-        // only update the json on success
+        // Save to file for persistence (using cache contents)
         await openChannelInfo(message.channelId,
             message.channel as TextChannel,
-            msgHist.getItems()
+            messageHistoryCache.getHistory(message.channelId)
         )
     } catch (error: any) {
-        msgHist.pop() // remove message because of failure
         message.reply(`**Error Occurred:**\n\n**Reason:** *${error.message}*`)
     }
 })

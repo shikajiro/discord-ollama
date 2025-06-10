@@ -38,23 +38,27 @@ export async function shouldReply(
       messages: [
         {
           role: "system",
-          content: `あなたはDiscordチャンネルのメッセージを分析して、ボットが返事をするべきかどうかを判断します。
-過去の会話の文脈を考慮して判断してください。基本的には「no」と答え、必要な場合のみ「yes」と答えてください。
+          content: `あなたはDiscordチャンネルのメッセージを分析して、人間として自然に振る舞うべきかどうかを判断するAIです。
 
-以下の場合のみ「yes」と答えてください：
-- ボットの名前が明確に呼ばれている
-- ボットに対する直接的な質問がある
-- ボットが前の発言をした直後で、明らかに返答が期待されている
+以下の場合に「yes」と答えてください：
+- あなたの名前が明示的に呼ばれている（@メンション、名前での呼びかけなど）
+- あなたに対する直接的な質問や依頼がある
+- あなたが前の発言をした直後で、明らかに返答が期待されている文脈
+- あなたの能力について質問されている
+- あなたに何かをしてもらいたいという意図が明確
+- 会話の流れで自然に参加できる場面
+- 他の人からの質問や話題に自然に反応できる状況
 
-それ以外は全て「no」と答えてください。特に：
-- 一般的な質問や感想
-- 他の人同士の会話
-- 挨拶や雑談
-- ボットへの言及がない内容
-- すでに他の人が答えた質問
-- 文脈的に無関係な新しい話題
+「no」と答えるのは以下の場合のみ：
+- 明らかに他の人同士のプライベートな会話
+- あなたが参加するのが不自然な場面
+- すでに他の人が適切に答えた質問
+- あなたの存在を前提としない完全に無関係な話題
 
-「yes」または「no」のみで答えてください。理由は不要です。`,
+過去の会話履歴も考慮して、人間らしく自然な会話の流れを保つよう判断してください。
+
+判断結果とその理由を以下の形式で答えてください：
+「yes」または「no」: 理由`,
           images: [],
         },
         {
@@ -67,7 +71,15 @@ export async function shouldReply(
     });
 
     const decision = response.message.content.toLowerCase().trim();
-    return decision.includes("yes") || decision.includes("はい");
+    const shouldReplyResult =
+      decision.includes("yes") || decision.includes("はい");
+
+    console.log(
+      `[shouldReply] 判断結果: ${shouldReplyResult ? "返事する" : "返事しない"}`
+    );
+    console.log(`[shouldReply] AIの判断: ${response.message.content}`);
+
+    return shouldReplyResult;
   } catch (error) {
     console.log("[shouldReply] Error:", error);
     return false; // エラーの場合は返事しない
